@@ -28,6 +28,7 @@ The contract then goes on to update the `minted` variable to true after the exte
 All the gold nfts in the contract could be minted out by this malicious attack
 
 # Recommendation
-Reset `minted` variable to true before making the `_safeMint()` call. This follows the Check-Effects-Interaction pattern recommended as a best practice
+ - Reset `minted` variable to true before making the `_safeMint()` call. This follows the Check-Effects-Interaction pattern recommended as a best practice
+ - We can also use the `noReentrant` modifier on the `takeOneNFT()` provided by Openzeppelin standard library
 
 
